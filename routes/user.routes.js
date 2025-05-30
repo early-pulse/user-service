@@ -21,4 +21,12 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 
+// Token verification endpoint for other services
+router.route("/verify-token").get(verifyJWT, (req, res) => {
+    res.status(200).json({
+        success: true,
+        data: req.user // User data is already attached by verifyJWT middleware
+    });
+});
+
 export default router;
