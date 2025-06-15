@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { logger } from "../utils/logger.js";
 
 const generateAccessAndRefereshTokens = async (userId) => {
   try {
@@ -23,24 +24,10 @@ const generateAccessAndRefereshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  // get user details from frontend
-  // validation - not empty
-  // check if user already exists: username, email
-  // check for images, check for avatar
-  // upload them to cloudinary, avatar
-  // create user object - create entry in db
-  // remove password and refresh token field from response
-  // check for user creation
-  // return res
-
   const { fullName, email, password, role } = req.body;
-  console.log("req body: ", req.body);
-  console.log("fullName: ", fullName);
-  console.log("email: ", email);
-  console.log("password: ", password);
-  console.log("role: ", role);
 
   if ([fullName, email, password, role].some((field) => field?.trim() === "")) {
+    logger.logApi('/register', req.method, 400);
     throw new ApiError(400, "All fields are required");
   }
 
@@ -49,6 +36,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (existedUser) {
+    logger.logApi('/register', req.method, 409);
     throw new ApiError(409, "User with email already exists");
   }
 
@@ -64,46 +52,37 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
+    logger.logApi('/register', req.method, 500);
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
+  logger.logApi('/register', req.method, 201);
   return res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User registered Successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  // req body -> data
-  // username or email
-  //find the user
-  //password check
-  //access and referesh token
-  //send cookie
-
   const { email, password } = req.body;
-  console.log(email);
 
   if (!email) {
+    logger.logApi('/login', req.method, 400);
     throw new ApiError(400, "email is required");
   }
-
-  // Here is an alternative of above code based on logic discussed in video:
-  // if (!(username || email)) {
-  //     throw new ApiError(400, "username or email is required")
-
-  // }
 
   const user = await User.findOne({
     $or: [{ email }],
   });
 
   if (!user) {
+    logger.logApi('/login', req.method, 404);
     throw new ApiError(404, "User does not exist");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
+    logger.logApi('/login', req.method, 401);
     throw new ApiError(401, "Invalid user credentials");
   }
 
@@ -120,6 +99,7 @@ const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   };
 
+  logger.logApi('/login', req.method, 200);
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
@@ -142,7 +122,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $unset: {
-        refreshToken: 1, // this removes the field from document
+        refreshToken: 1,
       },
     },
     {
@@ -155,6 +135,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     secure: true,
   };
 
+  logger.logApi('/logout', req.method, 200);
   return res
     .status(200)
     .clearCookie("accessToken", options)
@@ -167,6 +148,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
+    logger.logApi('/refresh-token', req.method, 401);
     throw new ApiError(401, "unauthorized request");
   }
 
@@ -179,10 +161,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const user = await User.findById(decodedToken?._id);
 
     if (!user) {
+      logger.logApi('/refresh-token', req.method, 401);
       throw new ApiError(401, "Invalid refresh token");
     }
 
     if (incomingRefreshToken !== user?.refreshToken) {
+      logger.logApi('/refresh-token', req.method, 401);
       throw new ApiError(401, "Refresh token is expired or used");
     }
 
@@ -194,6 +178,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefereshTokens(user._id);
 
+    logger.logApi('/refresh-token', req.method, 200);
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
@@ -206,6 +191,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
+    logger.logApi('/refresh-token', req.method, 401);
     throw new ApiError(401, error?.message || "Invalid refresh token");
   }
 });
@@ -217,18 +203,21 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
   if (!isPasswordCorrect) {
+    logger.logApi('/change-password', req.method, 400);
     throw new ApiError(400, "Invalid old password");
   }
 
   user.password = newPassword;
   await user.save({ validateBeforeSave: false });
 
+  logger.logApi('/change-password', req.method, 200);
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  logger.logApi('/current-user', req.method, 200);
   return res
     .status(200)
     .json(new ApiResponse(200, req.user, "User fetched successfully"));
@@ -238,6 +227,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
   if (!fullName || !email) {
+    logger.logApi('/update-account', req.method, 400);
     throw new ApiError(400, "All fields are required");
   }
 
@@ -252,6 +242,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
+  logger.logApi('/update-account', req.method, 200);
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Account details updated successfully"));
