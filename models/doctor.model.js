@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const userSchema = new Schema(
+const doctorSchema = new Schema(
   {
     name: {
       type: String,
@@ -27,7 +27,7 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
-    emergencyContactNumber: {
+    specialization: {
       type: String,
       required: true,
       trim: true,
@@ -46,7 +46,7 @@ const userSchema = new Schema(
 );
 
 // Password hashing middleware
-userSchema.pre("save", async function (next) {
+doctorSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
@@ -54,18 +54,18 @@ userSchema.pre("save", async function (next) {
 });
 
 // Password verification method
-userSchema.methods.isPasswordCorrect = async function (password) {
+doctorSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
 // Access token generation
-userSchema.methods.generateAccessToken = function () {
+doctorSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
       _id: this._id,
       email: this.email,
       name: this.name,
-      entityType: "User",
+      entityType: "Doctor",
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -75,11 +75,11 @@ userSchema.methods.generateAccessToken = function () {
 };
 
 // Refresh token generation
-userSchema.methods.generateRefreshToken = function () {
+doctorSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
-      entityType: "User",
+      entityType: "Doctor",
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
@@ -88,4 +88,4 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
-export const User = mongoose.model("User", userSchema); 
+export const Doctor = mongoose.model("Doctor", doctorSchema); 

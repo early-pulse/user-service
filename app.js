@@ -15,7 +15,23 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
+// Import routes
 import userRouter from "./routes/user.routes.js";
+import doctorRouter from "./routes/doctor.routes.js";
+import labRouter from "./routes/lab.routes.js";
+
+// Use routes
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/doctors", doctorRouter);
+app.use("/api/v1/labs", labRouter);
+
+// Health check endpoint
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "User Service is running",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 export { app };

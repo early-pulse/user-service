@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const userSchema = new Schema(
+const labSchema = new Schema(
   {
     name: {
       type: String,
@@ -27,10 +27,20 @@ const userSchema = new Schema(
       required: true,
       trim: true,
     },
-    emergencyContactNumber: {
+    testsOffered: [{
       type: String,
       required: true,
       trim: true,
+    }],
+    bloodInventory: {
+      A_Positive: { type: Number, default: 0 },
+      A_Negative: { type: Number, default: 0 },
+      B_Positive: { type: Number, default: 0 },
+      B_Negative: { type: Number, default: 0 },
+      AB_Positive: { type: Number, default: 0 },
+      AB_Negative: { type: Number, default: 0 },
+      O_Positive: { type: Number, default: 0 },
+      O_Negative: { type: Number, default: 0 },
     },
     password: {
       type: String,
@@ -46,7 +56,7 @@ const userSchema = new Schema(
 );
 
 // Password hashing middleware
-userSchema.pre("save", async function (next) {
+labSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
@@ -54,18 +64,18 @@ userSchema.pre("save", async function (next) {
 });
 
 // Password verification method
-userSchema.methods.isPasswordCorrect = async function (password) {
+labSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
 // Access token generation
-userSchema.methods.generateAccessToken = function () {
+labSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
       _id: this._id,
       email: this.email,
       name: this.name,
-      entityType: "User",
+      entityType: "Lab",
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -75,11 +85,11 @@ userSchema.methods.generateAccessToken = function () {
 };
 
 // Refresh token generation
-userSchema.methods.generateRefreshToken = function () {
+labSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
-      entityType: "User",
+      entityType: "Lab",
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
@@ -88,4 +98,4 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
-export const User = mongoose.model("User", userSchema); 
+export const Lab = mongoose.model("Lab", labSchema); 
