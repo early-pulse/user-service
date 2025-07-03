@@ -1,6 +1,7 @@
 import { Lab } from "../models/lab.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { logger } from "../utils/logger.js";
+import { getCoordinatesFromAddress } from '../utils/asyncHandler.js';
 
 class LabService {
   async register(labData) {
@@ -13,6 +14,12 @@ class LabService {
     }
 
     // Create new lab
+    let coordinates = [0, 0];
+    try {
+      coordinates = await getCoordinatesFromAddress(address);
+    } catch (e) {
+      logger.error('Geocoding failed for lab registration:', e.message);
+    }
     const lab = await Lab.create({
       name,
       email,
@@ -20,6 +27,7 @@ class LabService {
       address,
       testsOffered,
       password,
+      coordinates: { type: 'Point', coordinates },
     });
 
     // Return lab without password
