@@ -1,6 +1,7 @@
 import { Doctor } from "../models/doctor.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { logger } from "../utils/logger.js";
+import { getCoordinatesFromAddress } from '../utils/asyncHandler.js';
 
 class DoctorService {
   async register(doctorData) {
@@ -13,6 +14,12 @@ class DoctorService {
     }
 
     // Create new doctor
+    let coordinates = [0, 0];
+    try {
+      coordinates = await getCoordinatesFromAddress(address);
+    } catch (e) {
+      logger.error('Geocoding failed for doctor registration:', e.message);
+    }
     const doctor = await Doctor.create({
       name,
       email,
@@ -20,6 +27,7 @@ class DoctorService {
       address,
       specialization,
       password,
+      coordinates: { type: 'Point', coordinates },
     });
 
     // Return doctor without password
