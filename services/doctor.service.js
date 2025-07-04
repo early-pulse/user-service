@@ -10,7 +10,7 @@ class DoctorService {
     // Check if doctor already exists
     const existingDoctor = await Doctor.findOne({ email });
     if (existingDoctor) {
-      throw new ApiError(409, "Doctor with this email already exists");
+      throw new ApiError(409, "A doctor account with this email address already exists. Please use a different email or try logging in.");
     }
 
     // Create new doctor
@@ -20,38 +20,46 @@ class DoctorService {
     } catch (e) {
       logger.error('Geocoding failed for doctor registration:', e.message);
     }
-    const doctor = await Doctor.create({
-      name,
-      email,
-      phoneNumber,
-      address,
-      specialization,
-      password,
-      role,
-      coordinates: { type: 'Point', coordinates },
-    });
-
-    // Return doctor without password
-    const createdDoctor = await Doctor.findById(doctor._id).select("-password -refreshToken");
     
-    if (!createdDoctor) {
-      throw new ApiError(500, "Something went wrong while registering the doctor");
-    }
+    try {
+      const doctor = await Doctor.create({
+        name,
+        email,
+        phoneNumber,
+        address,
+        specialization,
+        password,
+        role,
+        coordinates: { type: 'Point', coordinates },
+      });
 
-    return createdDoctor;
+      // Return doctor without password
+      const createdDoctor = await Doctor.findById(doctor._id).select("-password -refreshToken");
+      
+      if (!createdDoctor) {
+        throw new ApiError(500, "Failed to create doctor account. Please try again.");
+      }
+
+      return createdDoctor;
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ApiError(409, "A doctor account with this email address already exists. Please use a different email or try logging in.");
+      }
+      throw new ApiError(500, "Failed to create doctor account. Please try again.");
+    }
   }
 
   async login(email, password) {
     // Find doctor by email
     const doctor = await Doctor.findOne({ email });
     if (!doctor) {
-      throw new ApiError(404, "Doctor does not exist");
+      throw new ApiError(401, "No doctor account found with this email address. Please check your email or create a new account.");
     }
 
     // Verify password
     const isPasswordValid = await doctor.isPasswordCorrect(password);
     if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid credentials");
+      throw new ApiError(401, "Incorrect password. Please check your password and try again.");
     }
 
     // Generate tokens
