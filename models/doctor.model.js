@@ -39,6 +39,12 @@ const doctorSchema = new Schema(
     refreshToken: {
       type: String,
     },
+    role: {
+      type: String,
+      required: true,
+      enum: ["doctor", "admin"],
+      default: "doctor",
+    },
     coordinates: {
       type: {
         type: String,

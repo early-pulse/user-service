@@ -6,10 +6,10 @@ import { logger } from "../utils/logger.js";
 import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, phoneNumber, address, emergencyContactNumber, password } = req.body;
+  const { name, email, phoneNumber, address, emergencyContactNumber, password, role } = req.body;
 
   // Validate required fields
-  if ([name, email, phoneNumber, address, emergencyContactNumber, password].some((field) => field?.trim() === "")) {
+  if ([name, email, phoneNumber, address, emergencyContactNumber, password, role].some((field) => field?.trim() === "")) {
     logger.logApi('/user/register', req.method, 400);
     throw new ApiError(400, "All fields are required");
   }
@@ -21,6 +21,7 @@ const registerUser = asyncHandler(async (req, res) => {
     address,
     emergencyContactNumber,
     password,
+    role,
   });
 
   logger.logApi('/user/register', req.method, 201);

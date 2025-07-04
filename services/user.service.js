@@ -5,7 +5,7 @@ import { getCoordinatesFromAddress } from '../utils/asyncHandler.js';
 
 class UserService {
   async register(userData) {
-    const { name, email, phoneNumber, address, emergencyContactNumber, password } = userData;
+    const { name, email, phoneNumber, address, emergencyContactNumber, password, role } = userData;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -27,6 +27,7 @@ class UserService {
       address,
       emergencyContactNumber,
       password,
+      role,
       coordinates: { type: 'Point', coordinates },
     });
 
