@@ -6,27 +6,15 @@ import { logger } from "../utils/logger.js";
 import jwt from "jsonwebtoken";
 
 const registerLab = asyncHandler(async (req, res) => {
-  const { name, email, phoneNumber, address, testsOffered, password } =
-    req.body;
+  const { name, email, phoneNumber, address, testsOffered, password, role } = req.body;
 
   // Validate required fields
-  if (
-    [name, email, phoneNumber, address, password].some(
-      (field) => field?.trim() === ""
-    )
-  ) {
+  if ([name, email, phoneNumber, address, password, role].some((field) => field?.trim() === "")) {
     logger.logApi("/lab/register", req.method, 400);
-    throw new ApiError(
-      400,
-      "Name, email, phone number, address, and password are required"
-    );
+    throw new ApiError(400, "Name, email, phone number, address, password, and role are required");
   }
 
-  if (
-    !testsOffered ||
-    !Array.isArray(testsOffered) ||
-    testsOffered.length === 0
-  ) {
+  if (!testsOffered || !Array.isArray(testsOffered) || testsOffered.length === 0) {
     logger.logApi("/lab/register", req.method, 400);
     throw new ApiError(400, "At least one test must be offered");
   }
@@ -38,6 +26,7 @@ const registerLab = asyncHandler(async (req, res) => {
     address,
     testsOffered,
     password,
+    role,
   });
 
   logger.logApi("/lab/register", req.method, 201);

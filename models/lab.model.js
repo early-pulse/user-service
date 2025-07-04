@@ -42,6 +42,12 @@ const labSchema = new Schema(
       O_Positive: { type: Number, default: 0 },
       O_Negative: { type: Number, default: 0 },
     },
+    role: {
+      type: String,
+      required: true,
+      enum: ["lab", "admin"],
+      default: "lab",
+    },
     password: {
       type: String,
       required: [true, "Password is required"],

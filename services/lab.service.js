@@ -5,7 +5,7 @@ import { getCoordinatesFromAddress } from '../utils/asyncHandler.js';
 
 class LabService {
   async register(labData) {
-    const { name, email, phoneNumber, address, testsOffered, password } = labData;
+    const { name, email, phoneNumber, address, testsOffered, password, role } = labData;
 
     // Check if lab already exists
     const existingLab = await Lab.findOne({ email });
@@ -27,6 +27,7 @@ class LabService {
       address,
       testsOffered,
       password,
+      role,
       coordinates: { type: 'Point', coordinates },
     });
 
