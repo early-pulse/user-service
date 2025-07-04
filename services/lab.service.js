@@ -10,7 +10,7 @@ class LabService {
     // Check if lab already exists
     const existingLab = await Lab.findOne({ email });
     if (existingLab) {
-      throw new ApiError(409, "Lab with this email already exists");
+      throw new ApiError(409, "A lab account with this email address already exists. Please use a different email or try logging in.");
     }
 
     // Create new lab
@@ -20,38 +20,46 @@ class LabService {
     } catch (e) {
       logger.error('Geocoding failed for lab registration:', e.message);
     }
-    const lab = await Lab.create({
-      name,
-      email,
-      phoneNumber,
-      address,
-      testsOffered,
-      password,
-      role,
-      coordinates: { type: 'Point', coordinates },
-    });
-
-    // Return lab without password
-    const createdLab = await Lab.findById(lab._id).select("-password -refreshToken");
     
-    if (!createdLab) {
-      throw new ApiError(500, "Something went wrong while registering the lab");
-    }
+    try {
+      const lab = await Lab.create({
+        name,
+        email,
+        phoneNumber,
+        address,
+        testsOffered,
+        password,
+        role,
+        coordinates: { type: 'Point', coordinates },
+      });
 
-    return createdLab;
+      // Return lab without password
+      const createdLab = await Lab.findById(lab._id).select("-password -refreshToken");
+      
+      if (!createdLab) {
+        throw new ApiError(500, "Failed to create lab account. Please try again.");
+      }
+
+      return createdLab;
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ApiError(409, "A lab account with this email address already exists. Please use a different email or try logging in.");
+      }
+      throw new ApiError(500, "Failed to create lab account. Please try again.");
+    }
   }
 
   async login(email, password) {
     // Find lab by email
     const lab = await Lab.findOne({ email });
     if (!lab) {
-      throw new ApiError(404, "Lab does not exist");
+      throw new ApiError(401, "No lab account found with this email address. Please check your email or create a new account.");
     }
 
     // Verify password
     const isPasswordValid = await lab.isPasswordCorrect(password);
     if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid credentials");
+      throw new ApiError(401, "Incorrect password. Please check your password and try again.");
     }
 
     // Generate tokens

@@ -10,7 +10,7 @@ class UserService {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw new ApiError(409, "User with this email already exists");
+      throw new ApiError(409, "An account with this email address already exists. Please use a different email or try logging in.");
     }
 
     // Create new user
@@ -20,38 +20,46 @@ class UserService {
     } catch (e) {
       logger.error('Geocoding failed for user registration:', e.message);
     }
-    const user = await User.create({
-      name,
-      email,
-      phoneNumber,
-      address,
-      emergencyContactNumber,
-      password,
-      role,
-      coordinates: { type: 'Point', coordinates },
-    });
-
-    // Return user without password
-    const createdUser = await User.findById(user._id).select("-password -refreshToken");
     
-    if (!createdUser) {
-      throw new ApiError(500, "Something went wrong while registering the user");
-    }
+    try {
+      const user = await User.create({
+        name,
+        email,
+        phoneNumber,
+        address,
+        emergencyContactNumber,
+        password,
+        role,
+        coordinates: { type: 'Point', coordinates },
+      });
 
-    return createdUser;
+      // Return user without password
+      const createdUser = await User.findById(user._id).select("-password -refreshToken");
+      
+      if (!createdUser) {
+        throw new ApiError(500, "Failed to create user account. Please try again.");
+      }
+
+      return createdUser;
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ApiError(409, "An account with this email address already exists. Please use a different email or try logging in.");
+      }
+      throw new ApiError(500, "Failed to create user account. Please try again.");
+    }
   }
 
   async login(email, password) {
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      throw new ApiError(404, "User does not exist");
+      throw new ApiError(401, "No account found with this email address. Please check your email or create a new account.");
     }
 
     // Verify password
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid credentials");
+      throw new ApiError(401, "Incorrect password. Please check your password and try again.");
     }
 
     // Generate tokens

@@ -8,67 +8,127 @@ import jwt from "jsonwebtoken";
 const registerLab = asyncHandler(async (req, res) => {
   const { name, email, phoneNumber, address, testsOffered, password, role } = req.body;
 
-  // Validate required fields
-  if ([name, email, phoneNumber, address, password, role].some((field) => field?.trim() === "")) {
-    logger.logApi("/lab/register", req.method, 400);
-    throw new ApiError(400, "Name, email, phone number, address, password, and role are required");
+  // Validate required fields with specific error messages
+  const requiredFields = [
+    { field: 'name', value: name, message: 'Name is required' },
+    { field: 'email', value: email, message: 'Email is required' },
+    { field: 'phoneNumber', value: phoneNumber, message: 'Phone number is required' },
+    { field: 'address', value: address, message: 'Address is required' },
+    { field: 'password', value: password, message: 'Password is required' },
+    { field: 'role', value: role, message: 'Role is required' }
+  ];
+
+  for (const field of requiredFields) {
+    if (!field.value || field.value.trim() === "") {
+      logger.logApi("/lab/register", req.method, 400);
+      throw new ApiError(400, field.message);
+    }
   }
 
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    logger.logApi("/lab/register", req.method, 400);
+    throw new ApiError(400, "Please provide a valid email address");
+  }
+
+  // Validate password strength
+  if (password.length < 6) {
+    logger.logApi("/lab/register", req.method, 400);
+    throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  // Validate role
+  const validRoles = ["lab", "admin"];
+  if (!validRoles.includes(role)) {
+    logger.logApi("/lab/register", req.method, 400);
+    throw new ApiError(400, "Invalid role. Must be one of: lab, admin");
+  }
+
+  // Validate testsOffered
   if (!testsOffered || !Array.isArray(testsOffered) || testsOffered.length === 0) {
     logger.logApi("/lab/register", req.method, 400);
     throw new ApiError(400, "At least one test must be offered");
   }
 
-  const lab = await labService.register({
-    name,
-    email,
-    phoneNumber,
-    address,
-    testsOffered,
-    password,
-    role,
-  });
+  // Validate that all tests are strings and not empty
+  for (let i = 0; i < testsOffered.length; i++) {
+    if (!testsOffered[i] || typeof testsOffered[i] !== 'string' || testsOffered[i].trim() === '') {
+      logger.logApi("/lab/register", req.method, 400);
+      throw new ApiError(400, `Test at position ${i + 1} is invalid. All tests must be non-empty strings.`);
+    }
+  }
 
-  logger.logApi("/lab/register", req.method, 201);
-  return res
-    .status(201)
-    .json(new ApiResponse(201, lab, "Lab registered successfully"));
+  try {
+    const lab = await labService.register({
+      name,
+      email,
+      phoneNumber,
+      address,
+      testsOffered,
+      password,
+      role,
+    });
+
+    logger.logApi("/lab/register", req.method, 201);
+    return res
+      .status(201)
+      .json(new ApiResponse(201, lab, "Lab registered successfully"));
+  } catch (error) {
+    // Re-throw the error to be handled by the global error handler
+    throw error;
+  }
 });
 
 const loginLab = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  // Validate required fields with specific error messages
+  if (!email || email.trim() === "") {
     logger.logApi("/lab/login", req.method, 400);
-    throw new ApiError(400, "Email and password are required");
+    throw new ApiError(400, "Email is required");
   }
 
-  const { lab, accessToken, refreshToken } = await labService.login(
-    email,
-    password
-  );
+  if (!password || password.trim() === "") {
+    logger.logApi("/lab/login", req.method, 400);
+    throw new ApiError(400, "Password is required");
+  }
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    logger.logApi("/lab/login", req.method, 400);
+    throw new ApiError(400, "Please provide a valid email address");
+  }
 
-  logger.logApi("/lab/login", req.method, 200);
-  return res
-    .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          lab,
-          accessToken,
-          refreshToken,
-        },
-        "Lab logged in successfully"
-      )
-    );
+  try {
+    const { lab, accessToken, refreshToken } = await labService.login(email, password);
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    logger.logApi("/lab/login", req.method, 200);
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            lab,
+            accessToken,
+            refreshToken,
+          },
+          "Lab logged in successfully"
+        )
+      );
+  } catch (error) {
+    // Re-throw the error to be handled by the global error handler
+    throw error;
+  }
 });
 
 const logoutLab = asyncHandler(async (req, res) => {

@@ -8,59 +8,114 @@ import jwt from "jsonwebtoken";
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, phoneNumber, address, emergencyContactNumber, password, role } = req.body;
 
-  // Validate required fields
-  if ([name, email, phoneNumber, address, emergencyContactNumber, password, role].some((field) => field?.trim() === "")) {
-    logger.logApi('/user/register', req.method, 400);
-    throw new ApiError(400, "All fields are required");
+  // Validate required fields with specific error messages
+  const requiredFields = [
+    { field: 'name', value: name, message: 'Name is required' },
+    { field: 'email', value: email, message: 'Email is required' },
+    { field: 'phoneNumber', value: phoneNumber, message: 'Phone number is required' },
+    { field: 'address', value: address, message: 'Address is required' },
+    { field: 'emergencyContactNumber', value: emergencyContactNumber, message: 'Emergency contact number is required' },
+    { field: 'password', value: password, message: 'Password is required' },
+    { field: 'role', value: role, message: 'Role is required' }
+  ];
+
+  for (const field of requiredFields) {
+    if (!field.value || field.value.trim() === "") {
+      logger.logApi('/user/register', req.method, 400);
+      throw new ApiError(400, field.message);
+    }
   }
 
-  const user = await userService.register({
-    name,
-    email,
-    phoneNumber,
-    address,
-    emergencyContactNumber,
-    password,
-    role,
-  });
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    logger.logApi('/user/register', req.method, 400);
+    throw new ApiError(400, "Please provide a valid email address");
+  }
 
-  logger.logApi('/user/register', req.method, 201);
-  return res
-    .status(201)
-    .json(new ApiResponse(201, user, "User registered successfully"));
+  // Validate password strength
+  if (password.length < 6) {
+    logger.logApi('/user/register', req.method, 400);
+    throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  // Validate role
+  const validRoles = ["user", "admin", "doctor", "lab"];
+  if (!validRoles.includes(role)) {
+    logger.logApi('/user/register', req.method, 400);
+    throw new ApiError(400, "Invalid role. Must be one of: user, admin, doctor, lab");
+  }
+
+  try {
+    const user = await userService.register({
+      name,
+      email,
+      phoneNumber,
+      address,
+      emergencyContactNumber,
+      password,
+      role,
+    });
+
+    logger.logApi('/user/register', req.method, 201);
+    return res
+      .status(201)
+      .json(new ApiResponse(201, user, "User registered successfully"));
+  } catch (error) {
+    // Re-throw the error to be handled by the global error handler
+    throw error;
+  }
 });
 
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  // Validate required fields with specific error messages
+  if (!email || email.trim() === "") {
     logger.logApi('/user/login', req.method, 400);
-    throw new ApiError(400, "Email and password are required");
+    throw new ApiError(400, "Email is required");
   }
 
-  const { user, accessToken, refreshToken } = await userService.login(email, password);
+  if (!password || password.trim() === "") {
+    logger.logApi('/user/login', req.method, 400);
+    throw new ApiError(400, "Password is required");
+  }
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-  };
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    logger.logApi('/user/login', req.method, 400);
+    throw new ApiError(400, "Please provide a valid email address");
+  }
 
-  logger.logApi('/user/login', req.method, 200);
-  return res
-    .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          user,
-          accessToken,
-          refreshToken,
-        },
-        "User logged in successfully"
-      )
-    );
+  try {
+    const { user, accessToken, refreshToken } = await userService.login(email, password);
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    logger.logApi('/user/login', req.method, 200);
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            user,
+            accessToken,
+            refreshToken,
+          },
+          "User logged in successfully"
+        )
+      );
+  } catch (error) {
+    // Re-throw the error to be handled by the global error handler
+    throw error;
+  }
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
