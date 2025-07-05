@@ -149,7 +149,7 @@ class UserService {
     }
 
     user.password = newPassword;
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     return { message: "Password changed successfully" };
   }

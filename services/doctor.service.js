@@ -149,7 +149,7 @@ class DoctorService {
     }
 
     doctor.password = newPassword;
-    await doctor.save();
+    await doctor.save({ validateBeforeSave: false });
 
     return { message: "Password changed successfully" };
   }
