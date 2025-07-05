@@ -149,7 +149,7 @@ class LabService {
     }
 
     lab.password = newPassword;
-    await lab.save();
+    await lab.save({ validateBeforeSave: false });
 
     return { message: "Password changed successfully" };
   }
