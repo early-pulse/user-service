@@ -329,15 +329,14 @@ const verifyToken = asyncHandler(async (req, res) => {
 // --- BloodBank features merged below ---
 
 const updateBloodInventory = asyncHandler(async (req, res) => {
-  const { bloodType, quantity } = req.body;
-  if (!bloodType || quantity === undefined || quantity < 0) {
+  const { inventory } = req.body;
+  if (!inventory || typeof inventory !== 'object' || Array.isArray(inventory)) {
     logger.logApi("/labs/update-inventory", req.method, 400);
-    throw new ApiError(400, "Blood type and valid quantity are required");
+    throw new ApiError(400, "inventory is required and must be an object");
   }
   const lab = await labService.updateBloodInventory(
     req.user._id,
-    bloodType,
-    quantity
+    inventory
   );
   logger.logApi("/labs/update-inventory", req.method, 200);
   return res

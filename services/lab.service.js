@@ -210,20 +210,25 @@ class LabService {
     return lab;
   }
 
-  async updateBloodInventory(labId, bloodType, quantity) {
+  async updateBloodInventory(labId, inventory) {
     const lab = await Lab.findById(labId);
     if (!lab) {
       throw new ApiError(404, "Lab not found");
     }
-    // Validate blood type
+    // Validate blood types and quantities
     const validBloodTypes = [
       'A_Positive', 'A_Negative', 'B_Positive', 'B_Negative',
       'AB_Positive', 'AB_Negative', 'O_Positive', 'O_Negative'
     ];
-    if (!validBloodTypes.includes(bloodType)) {
-      throw new ApiError(400, "Invalid blood type");
+    for (const [bloodType, quantity] of Object.entries(inventory)) {
+      if (!validBloodTypes.includes(bloodType)) {
+        throw new ApiError(400, `Invalid blood type: ${bloodType}`);
+      }
+      if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
+        throw new ApiError(400, `Quantity for ${bloodType} must be a non-negative integer`);
+      }
+      lab.bloodInventory[bloodType] = quantity;
     }
-    lab.bloodInventory[bloodType] = Math.max(0, quantity);
     await lab.save();
     return lab;
   }
