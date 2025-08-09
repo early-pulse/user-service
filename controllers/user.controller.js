@@ -40,10 +40,10 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // Validate role
-  const validRoles = ["user", "admin", "doctor", "lab"];
+  const validRoles = ["user", "admin", "doctor", "lab", "medicalOwner"];
   if (!validRoles.includes(role)) {
     logger.logApi('/user/register', req.method, 400);
-    throw new ApiError(400, "Invalid role. Must be one of: user, admin, doctor, lab");
+    throw new ApiError(400, "Invalid role. Must be one of: user, admin, doctor, lab, medicalOwner");
   }
 
   try {
