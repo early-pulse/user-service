@@ -49,3 +49,6 @@ Dockerfile
 # Miscellaneous
 .cache/
 *.swp
+
+# Uploaded files
+uploads/
